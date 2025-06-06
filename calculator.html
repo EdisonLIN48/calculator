@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>外送平台抽成試算器</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    .container {
+      max-width: 400px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 16px;
+    }
+    .result {
+      margin-top: 15px;
+      font-weight: bold;
+      color: #007BFF;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>外送平台抽成試算器</h2>
+    <label for="storePrice">店內價格（元）</label>
+    <input type="number" id="storePrice" placeholder="例如：100" />
+
+    <label for="commission">外送平台抽成（％）</label>
+    <input type="number" id="commission" placeholder="例如：30" />
+
+    <button onclick="calculate()">計算建議上架價</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    function calculate() {
+      const storePrice = parseFloat(document.getElementById('storePrice').value);
+      const commission = parseFloat(document.getElementById('commission').value);
+
+      if (isNaN(storePrice) || isNaN(commission)) {
+        document.getElementById('result').textContent = "請輸入有效的數字";
+        return;
+      }
+
+      const commissionRate = commission / 100;
+      const deliveryPrice = storePrice / (1 - commissionRate);
+
+      document.getElementById('result').textContent =
+        `建議上架價格為：${deliveryPrice.toFixed(0)} 元`;
+    }
+  </script>
+</body>
+</html>
