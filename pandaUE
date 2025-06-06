@@ -1,0 +1,287 @@
+import React, { useState, useEffect } from 'react';
+
+// Icons from lucide-react, assuming it's available in the environment
+const FoodIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-soup">
+    <path d="M12 21a9 9 0 0 0 9-9V6H3v6a9 9 0 0 0 9 9Z"/><path d="M7 12h10"/><path d="M12 3v3"/>
+  </svg>
+);
+const CarIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-truck">
+    <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M10 18h6a2 2 0 0 0 2-2v-2h3l3 3v2h1a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1h-1.5a1.5 1.5 0 0 0-1.5 1.5V17a1.5 1.5 0 0 0 1.5 1.5H22"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>
+  </svg>
+);
+const DollarSignIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-dollar-sign">
+    <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+  </svg>
+);
+const TrendingUpIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trending-up">
+    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+  </svg>
+);
+
+const App = () => {
+  // 平台抽成數據
+  const commissionRates = {
+    foodpanda: {
+      trial: 0.27, // 27%
+      original: 0.33, // 33%
+    },
+    ubereats: {
+      trial: 0.28, // 28%
+      original: 0.33, // 33%
+    },
+  };
+
+  // 狀態變數
+  const [platform, setPlatform] = useState('foodpanda'); // foodpanda 或 ubereats
+  const [rateType, setRateType] = useState('trial'); // trial (試用期) 或 original (原費率)
+  const [inStorePrice, setInStorePrice] = useState(''); // 店內價格
+  const [itemCost, setItemCost] = useState(''); // 商品成本
+  const [desiredProfit, setDesiredProfit] = useState(''); // 預期利潤百分比
+
+  const [basicResult, setBasicResult] = useState(''); // 基本試算結果
+  const [advancedResult, setAdvancedResult] = useState(''); // 進階利潤定價結果
+  const [basicError, setBasicError] = useState(''); // 基本試算錯誤訊息
+  const [advancedError, setAdvancedError] = useState(''); // 進階利潤定價錯誤訊息
+
+  // 根據選擇的平台和費率類型獲取當前抽成比例
+  const getCurrentCommission = () => {
+    return commissionRates[platform][rateType];
+  };
+
+  // 處理基本定價試算
+  const calculateBasicPricing = () => {
+    const price = parseFloat(inStorePrice);
+    const commission = getCurrentCommission();
+
+    setBasicError('');
+    if (isNaN(price) || price <= 0) {
+      setBasicError('請輸入有效的店內價格 (必須為正數)。');
+      setBasicResult('');
+      return;
+    }
+
+    if (commission >= 1) { // 抽成不可能大於等於100%
+      setBasicError('抽成比例異常，無法計算。');
+      setBasicResult('');
+      return;
+    }
+
+    const platformPrice = price / (1 - commission);
+    setBasicResult(platformPrice.toFixed(2)); // 保留兩位小數
+  };
+
+  // 處理進階利潤定價
+  const calculateAdvancedPricing = () => {
+    const cost = parseFloat(itemCost);
+    const profitPercentage = parseFloat(desiredProfit) / 100; // 轉換為小數
+    const commission = getCurrentCommission();
+
+    setAdvancedError('');
+    if (isNaN(cost) || cost <= 0) {
+      setAdvancedError('請輸入有效的商品成本 (必須為正數)。');
+      setAdvancedResult('');
+      return;
+    }
+    if (isNaN(profitPercentage) || profitPercentage < 0) {
+      setAdvancedError('請輸入有效的預期利潤百分比 (必須為非負數)。');
+      setAdvancedResult('');
+      return;
+    }
+
+    if (commission + profitPercentage >= 1) {
+      setAdvancedError('預期利潤與平台抽成之和不能大於或等於 100%。請調整您的利潤目標或成本。');
+      setAdvancedResult('');
+      return;
+    }
+
+    const platformPrice = cost / (1 - commission - profitPercentage);
+    setAdvancedResult(platformPrice.toFixed(2)); // 保留兩位小數
+  };
+
+  // 當任何輸入或選擇改變時，重新計算
+  useEffect(() => {
+    calculateBasicPricing();
+  }, [inStorePrice, platform, rateType]);
+
+  useEffect(() => {
+    calculateAdvancedPricing();
+  }, [itemCost, desiredProfit, platform, rateType]);
+
+  // 根據選擇的平台生成備註文字
+  const getCommissionRemark = () => {
+    const foodpandaTrial = commissionRates.foodpanda.trial * 100;
+    const foodpandaOriginal = commissionRates.foodpanda.original * 100;
+    const ubereatsTrial = commissionRates.ubereats.trial * 100;
+    const ubereatsOriginal = commissionRates.ubereats.original * 100;
+
+    if (platform === 'foodpanda') {
+      return `foodpanda 平台抽成：試用期 ${foodpandaTrial}% (前三個月)，原費率 ${foodpandaOriginal}%`;
+    } else if (platform === 'ubereats') {
+      return `Uber Eats 平台抽成：試用期 ${ubereatsTrial}% (前六個月)，原費率 ${ubereatsOriginal}%`;
+    }
+    return '';
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 p-4 font-['Inter'] flex flex-col items-center justify-center">
+      <div className="w-full max-w-4xl bg-white p-8 rounded-xl shadow-2xl space-y-8 border-t-4 border-indigo-400">
+        <h1 className="text-4xl font-extrabold text-center text-indigo-700 mb-8 tracking-tight">
+          <DollarSignIcon className="inline-block mr-3 align-text-bottom" />
+          外送平台定價計算器
+        </h1>
+
+        {/* 平台與費率選擇區 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 p-6 bg-indigo-50 rounded-lg shadow-inner">
+          {/* 平台選擇 */}
+          <div>
+            <h2 className="text-2xl font-semibold text-indigo-600 mb-3 flex items-center">
+              <FoodIcon className="mr-2" />
+              選擇平台
+            </h2>
+            <div className="flex flex-wrap gap-4">
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  className="form-radio h-5 w-5 text-indigo-600 rounded-full focus:ring-indigo-500"
+                  name="platform"
+                  value="foodpanda"
+                  checked={platform === 'foodpanda'}
+                  onChange={() => setPlatform('foodpanda')}
+                />
+                <span className="ml-2 text-lg font-medium text-gray-800">foodpanda</span>
+              </label>
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  className="form-radio h-5 w-5 text-indigo-600 rounded-full focus:ring-indigo-500"
+                  name="platform"
+                  value="ubereats"
+                  checked={platform === 'ubereats'}
+                  onChange={() => setPlatform('ubereats')}
+                />
+                <span className="ml-2 text-lg font-medium text-gray-800">Uber Eats</span>
+              </label>
+            </div>
+          </div>
+
+          {/* 費率選擇 */}
+          <div>
+            <h2 className="text-2xl font-semibold text-indigo-600 mb-3 flex items-center">
+              <TrendingUpIcon className="mr-2" />
+              選擇費率
+            </h2>
+            <div className="flex flex-wrap gap-4">
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  className="form-radio h-5 w-5 text-indigo-600 rounded-full focus:ring-indigo-500"
+                  name="rateType"
+                  value="trial"
+                  checked={rateType === 'trial'}
+                  onChange={() => setRateType('trial')}
+                />
+                <span className="ml-2 text-lg font-medium text-gray-800">試用期費率 ({getCurrentCommission() * 100}%)</span>
+              </label>
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  className="form-radio h-5 w-5 text-indigo-600 rounded-full focus:ring-indigo-500"
+                  name="rateType"
+                  value="original"
+                  checked={rateType === 'original'}
+                  onChange={() => setRateType('original')}
+                />
+                <span className="ml-2 text-lg font-medium text-gray-800">原費率 ({getCurrentCommission() * 100}%)</span>
+              </label>
+            </div>
+            {/* 費率備註欄 */}
+            <p className="text-sm text-gray-500 mt-3 p-2 bg-indigo-100 rounded-md">
+              備註：{getCommissionRemark()}
+            </p>
+          </div>
+        </div>
+
+        {/* 基本定價試算區塊 */}
+        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+          <h2 className="text-3xl font-bold text-gray-800 mb-4 flex items-center">
+            <span className="bg-purple-100 p-2 rounded-full mr-3">💰</span>
+            基本定價試算 (不虧錢)
+          </h2>
+          <p className="text-gray-600 mb-5">輸入店內價格，計算外送平台建議售價，以確保扣除抽成後能收回店內價格。</p>
+          <div className="mb-4">
+            <label htmlFor="inStorePrice" className="block text-xl font-medium text-gray-700 mb-2">
+              店內價格 (元)：
+            </label>
+            <input
+              type="number"
+              id="inStorePrice"
+              className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+              placeholder="例如：100"
+              value={inStorePrice}
+              onChange={(e) => setInStorePrice(e.target.value)}
+            />
+            {basicError && <p className="text-red-500 text-sm mt-2">{basicError}</p>}
+          </div>
+          <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+            <p className="text-lg text-indigo-700 font-semibold flex items-center">
+              <span className="text-indigo-500 mr-2">➜</span> 外送平台建議售價：
+              <span className="text-indigo-800 text-2xl font-bold ml-2">
+                {basicResult ? `${basicResult} 元` : '請輸入數字'}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        {/* 進階利潤定價區塊 */}
+        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 mt-8">
+          <h2 className="text-3xl font-bold text-gray-800 mb-4 flex items-center">
+            <span className="bg-green-100 p-2 rounded-full mr-3">📈</span>
+            進階利潤定價 (含預期利潤)
+          </h2>
+          <p className="text-gray-600 mb-5">輸入商品成本及預期利潤百分比，計算外送平台建議售價，以達到您的利潤目標。</p>
+          <div className="mb-4">
+            <label htmlFor="itemCost" className="block text-xl font-medium text-gray-700 mb-2">
+              商品成本 (元)：
+            </label>
+            <input
+              type="number"
+              id="itemCost"
+              className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+              placeholder="例如：50"
+              value={itemCost}
+              onChange={(e) => setItemCost(e.target.value)}
+            />
+            {advancedError && itemCost && <p className="text-red-500 text-sm mt-2">{advancedError}</p>}
+          </div>
+          <div className="mb-4">
+            <label htmlFor="desiredProfit" className="block text-xl font-medium text-gray-700 mb-2">
+              預期利潤百分比 (%)：
+            </label>
+            <input
+              type="number"
+              id="desiredProfit"
+              className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+              placeholder="例如：30"
+              value={desiredProfit}
+              onChange={(e) => setDesiredProfit(e.target.value)}
+            />
+             {advancedError && desiredProfit && <p className="text-red-500 text-sm mt-2">{advancedError}</p>}
+          </div>
+          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+            <p className="text-lg text-green-700 font-semibold flex items-center">
+              <span className="text-green-500 mr-2">➜</span> 外送平台建議售價：
+              <span className="text-green-800 text-2xl font-bold ml-2">
+                {advancedResult ? `${advancedResult} 元` : '請輸入數字'}
+              </span>
+            </p>
+          </div>
+          {advancedError && (!itemCost || !desiredProfit) && <p className="text-red-500 text-sm mt-2">{advancedError}</p>}
+        </div>
+      </div>
+    </div>
+  );
+};
